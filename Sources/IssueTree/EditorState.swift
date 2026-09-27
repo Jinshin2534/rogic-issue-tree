@@ -26,6 +26,8 @@ final class EditorState: ObservableObject {
     weak var undoManager: UndoManager?
 
     @Published var currentTreeID: UUID
+    /// ガイドを表示中ならそのページID（nil ならツリーを表示）
+    @Published var guidePageID: String?
     @Published var selectedID: UUID?
     @Published var editingID: UUID?
     @Published var draft = ""
@@ -150,7 +152,7 @@ final class EditorState: ObservableObject {
     }
 
     func toggleRed() {
-        guard let selected = selectedID else { return }
+        guard guidePageID == nil, let selected = selectedID else { return }
         let treeID = currentTreeID
         mutate { $0.toggleRed(node: selected, in: treeID) }
     }
@@ -170,6 +172,7 @@ final class EditorState: ObservableObject {
     func openTree(_ id: UUID, select nodeID: UUID? = nil) {
         commitEdit()
         guard let tree = file.doc.tree(id) else { return }
+        guidePageID = nil
         currentTreeID = id
         selectedID = nodeID ?? tree.root.id
         focusToken += 1
@@ -178,7 +181,7 @@ final class EditorState: ObservableObject {
     /// 選択ノードを深掘り（なければ新しいツリーを作る）
     func drillDown() {
         commitEdit()
-        guard let selected = selectedID else { return }
+        guard guidePageID == nil, let selected = selectedID else { return }
         let treeID = currentTreeID
         let isNew = currentTree.root.find(selected)?.drillTreeID.flatMap { file.doc.tree($0) } == nil
         var drillID: UUID?
@@ -190,10 +193,15 @@ final class EditorState: ObservableObject {
         }
     }
 
-    var canGoToParent: Bool { currentTree.parentLink != nil }
+    func openGuide(_ id: String = Guide.pages[0].id) {
+        commitEdit()
+        guidePageID = id
+    }
+
+    var canGoToParent: Bool { guidePageID == nil && currentTree.parentLink != nil }
 
     func goToParentTree() {
-        guard let link = currentTree.parentLink else { return }
+        guard canGoToParent, let link = currentTree.parentLink else { return }
         openTree(link.treeID, select: link.nodeID)
     }
 
