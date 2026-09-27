@@ -40,12 +40,13 @@ struct NodeBox: View {
 /// 列ヘッダーとカギ線
 struct TreeBackdrop: View {
     let layout: TreeLayout
+    var kind: TreeKind = .issue
 
     var body: some View {
         let config = layout.config
         ZStack(alignment: .topLeading) {
             ForEach(0..<layout.columnCount, id: \.self) { depth in
-                Text(depth == 0 ? "トップイシュー" : "\(depth)層目")
+                Text(kind.header(depth: depth))
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(.secondary)
                     .frame(width: config.nodeWidth, height: config.headerHeight)
@@ -91,30 +92,35 @@ struct TreeCanvasView: View {
 
     var body: some View {
         let layout = editor.layout(for: tree)
-        ScrollView([.horizontal, .vertical]) {
+        GeometryReader { viewport in
+            ScrollView([.horizontal, .vertical]) {
                 ZStack(alignment: .topLeading) {
                     Color.clear
                         .contentShape(Rectangle())
                         .onTapGesture {
                             editor.commitEdit()
                         }
-                    TreeBackdrop(layout: layout)
+                    TreeBackdrop(layout: layout, kind: tree.kind)
                     ForEach(tree.root.allNodes) { node in
                         if let frame = layout.frames[node.id] {
-                            nodeView(node)
+                            nodeView(node, depth: layout.depths[node.id] ?? 0)
                                 .frame(width: frame.width, height: frame.height)
                                 .offset(x: frame.minX, y: frame.minY)
                         }
                     }
                 }
-                .frame(width: layout.size.width, height: layout.size.height, alignment: .topLeading)
+                // ツリーが画面より小さいときも左上に寄せる
+                .frame(width: max(layout.size.width, viewport.size.width),
+                       height: max(layout.size.height, viewport.size.height),
+                       alignment: .topLeading)
+            }
         }
         .background(Color(nsColor: .windowBackgroundColor))
         .background(KeyCatcher(isEditing: editor.editingID != nil, focusToken: editor.focusToken, onKey: editor.handleKey))
     }
 
     @ViewBuilder
-    private func nodeView(_ node: Node) -> some View {
+    private func nodeView(_ node: Node, depth: Int) -> some View {
         let isEditing = editor.editingID == node.id
         let isSelected = editor.selectedID == node.id
         ZStack(alignment: .topTrailing) {
@@ -122,7 +128,7 @@ struct TreeCanvasView: View {
                 NodeBox(text: node.text, isRed: node.isRed, selected: true, showsText: false)
                 NodeTextEditor(editor: editor, nodeID: node.id, isRed: node.isRed)
             } else {
-                NodeBox(text: node.text, isRed: node.isRed, selected: isSelected)
+                NodeBox(text: node.text, isRed: node.isRed, selected: isSelected, placeholder: tree.kind.placeholder(depth: depth))
                     .contentShape(Rectangle())
                     .onTapGesture { editor.select(node.id) }
                     .simultaneousGesture(TapGesture(count: 2).onEnded { editor.beginEdit(node.id) })
@@ -142,6 +148,13 @@ struct TreeCanvasView: View {
         }
         .contextMenu {
             Button("深掘り") { editor.select(node.id); editor.drillDown() }
+            if node.drillTreeID == nil {
+                Menu("種類を選んで深掘り") {
+                    ForEach(TreeKind.allCases, id: \.self) { kind in
+                        Button(kind.title) { editor.select(node.id); editor.drillDown(kind: kind) }
+                    }
+                }
+            }
             Button(node.isRed ? "赤字を解除" : "赤字にする") { editor.select(node.id); editor.toggleRed() }
             Divider()
             Button("子を追加") { editor.select(node.id); editor.addChild() }
@@ -160,7 +173,7 @@ struct StaticTreeView: View {
     var body: some View {
         ZStack(alignment: .topLeading) {
             Color.white
-            TreeBackdrop(layout: layout)
+            TreeBackdrop(layout: layout, kind: tree.kind)
             ForEach(tree.root.allNodes) { node in
                 if let frame = layout.frames[node.id] {
                     NodeBox(text: node.text, isRed: node.isRed, placeholder: nil)

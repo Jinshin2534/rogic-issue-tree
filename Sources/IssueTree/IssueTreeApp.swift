@@ -36,6 +36,9 @@ struct TreeCommands: Commands {
             Divider()
             Button("新しいツリー") { editor?.newTree() }
                 .keyboardShortcut("n", modifiers: [.command, .option])
+            if let editor {
+                Menu("種類を選んで新しいツリー") { NewTreeMenuItems(editor: editor) }
+            }
         }
         CommandGroup(replacing: .help) {
             Button("考え方ガイド") { editor?.openGuide() }

@@ -51,16 +51,41 @@ public struct NodeRef: Codable, Equatable, Hashable {
     }
 }
 
+/// ツリーの種類（分解のしかた）
+public enum TreeKind: String, Codable, CaseIterable {
+    /// 問いを小さな問いに分ける
+    case issue
+    /// 問題の原因を「なぜ？」で分ける
+    case why
+    /// 目的の手段を「どうやって？」で分ける
+    case how
+    /// 全体を要素に分ける
+    case what
+}
+
 public struct Tree: Codable, Identifiable, Equatable {
     public var id: UUID
     public var root: Node
     /// 深掘り元（どのツリーのどのノードから作られたか）
     public var parentLink: NodeRef?
+    public var kind: TreeKind
 
-    public init(id: UUID = UUID(), root: Node = Node(), parentLink: NodeRef? = nil) {
+    public init(id: UUID = UUID(), root: Node = Node(), parentLink: NodeRef? = nil, kind: TreeKind = .issue) {
         self.id = id
         self.root = root
         self.parentLink = parentLink
+        self.kind = kind
+    }
+
+    private enum CodingKeys: String, CodingKey { case id, root, parentLink, kind }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(UUID.self, forKey: .id)
+        root = try c.decode(Node.self, forKey: .root)
+        parentLink = try c.decodeIfPresent(NodeRef.self, forKey: .parentLink)
+        // 種類が追加される前のファイルはイシューツリーとして読む
+        kind = try c.decodeIfPresent(TreeKind.self, forKey: .kind) ?? .issue
     }
 
     public func parentID(of target: UUID) -> UUID? {
@@ -188,19 +213,20 @@ public struct IssueDocument: Codable, Equatable {
     }
 
     /// 深掘り：既にあればそのツリー、無ければノードをトップにした新しいツリーを作成してIDを返す。
-    public mutating func drillDown(node nodeID: UUID, in treeID: UUID) -> UUID? {
-        guard let node = tree(treeID)?.root.find(nodeID) else { return nil }
+    /// 種類を指定しなければ元のツリーと同じ種類にする。
+    public mutating func drillDown(node nodeID: UUID, in treeID: UUID, kind: TreeKind? = nil) -> UUID? {
+        guard let source = tree(treeID), let node = source.root.find(nodeID) else { return nil }
         if let existing = node.drillTreeID, tree(existing) != nil { return existing }
         let ref = NodeRef(treeID: treeID, nodeID: nodeID)
-        let newTree = Tree(root: Node(text: node.text, isRed: node.isRed), parentLink: ref)
+        let newTree = Tree(root: Node(text: node.text, isRed: node.isRed), parentLink: ref, kind: kind ?? source.kind)
         trees.append(newTree)
         updateNode(ref) { $0.drillTreeID = newTree.id }
         return newTree.id
     }
 
     @discardableResult
-    public mutating func addTree(text: String = "") -> UUID {
-        let tree = Tree(root: Node(text: text))
+    public mutating func addTree(text: String = "", kind: TreeKind = .issue) -> UUID {
+        let tree = Tree(root: Node(text: text), kind: kind)
         trees.append(tree)
         return tree.id
     }

@@ -83,8 +83,30 @@ final class DocumentTests: XCTestCase {
         XCTAssertNil(doc.tree(drillID)?.parentLink)
     }
 
+    func testDrillDownKeepsOrOverridesKind() {
+        var doc = IssueDocument(trees: [Tree(root: Node(text: "問題"), kind: .why)])
+        let mainID = doc.trees[0].id
+        var a: UUID!, b: UUID!
+        doc.updateTree(mainID) {
+            a = $0.addChild(to: $0.root.id, text: "原因A")
+            b = $0.addChild(to: $0.root.id, text: "原因B")
+        }
+        let sameKind = doc.drillDown(node: a, in: mainID)!
+        let howKind = doc.drillDown(node: b, in: mainID, kind: .how)!
+        let whatTree = doc.addTree(kind: .what)
+        XCTAssertEqual(doc.tree(sameKind)?.kind, .why)
+        XCTAssertEqual(doc.tree(howKind)?.kind, .how)
+        XCTAssertEqual(doc.tree(whatTree)?.kind, .what)
+    }
+
+    func testDecodesFilesWithoutKind() throws {
+        let json = #"{"trees":[{"id":"8D0E5A3C-1F2B-4C3D-9E8F-0A1B2C3D4E5F","root":{"id":"1D0E5A3C-1F2B-4C3D-9E8F-0A1B2C3D4E5F","text":"x","isRed":false,"children":[]}}]}"#
+        let doc = try JSONDecoder().decode(IssueDocument.self, from: Data(json.utf8))
+        XCTAssertEqual(doc.trees[0].kind, .issue)
+    }
+
     func testCodableRoundTrip() throws {
-        var doc = IssueDocument()
+        var doc = IssueDocument(trees: [Tree(kind: .how)])
         doc.updateTree(doc.trees[0].id) { $0.addChild(to: $0.root.id, text: "a") }
         let data = try JSONEncoder().encode(doc)
         XCTAssertEqual(try JSONDecoder().decode(IssueDocument.self, from: data), doc)

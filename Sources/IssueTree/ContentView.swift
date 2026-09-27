@@ -24,6 +24,8 @@ struct ContentView: View {
                         ParentBanner(parentTitle: parent.root.text) { editor.goToParentTree() }
                         Divider()
                     }
+                    KindBar(editor: editor, kind: editor.currentTree.kind)
+                    Divider()
                     TreeCanvasView(editor: editor, tree: editor.currentTree)
                 }
             }
@@ -91,6 +93,7 @@ private struct ShortcutHints: View {
                         .background(Color.gray.opacity(0.15), in: RoundedRectangle(cornerRadius: 3))
                     Text(label).font(.system(size: 11)).foregroundStyle(.secondary)
                 }
+                .fixedSize()
             }
         }
     }
@@ -122,7 +125,7 @@ struct TreeSidebar: View {
                     Label {
                         Text(tree.root.text.isEmpty ? "無題" : tree.root.text).lineLimit(1)
                     } icon: {
-                        Image(systemName: depth == 0 ? "list.bullet.indent" : "arrow.turn.down.right")
+                        Image(systemName: tree.kind.symbol)
                     }
                     .padding(.leading, CGFloat(depth) * 12)
                     .tag(Item.tree(tree.id))
@@ -140,10 +143,13 @@ struct TreeSidebar: View {
             }
         }
         .safeAreaInset(edge: .bottom) {
-            Button { editor.newTree() } label: {
+            Menu {
+                NewTreeMenuItems(editor: editor)
+            } label: {
                 Label("新しいツリー", systemImage: "plus")
             }
-            .buttonStyle(.borderless)
+            .menuStyle(.borderlessButton)
+            .fixedSize()
             .padding(10)
             .frame(maxWidth: .infinity, alignment: .leading)
         }

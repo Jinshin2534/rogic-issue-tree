@@ -8,8 +8,12 @@ struct GuideView: View {
 
     var body: some View {
         ScrollView {
-            GuidePageContent(page: page) { markdown in
-                editor.importTrees(MarkdownCodec.parse(markdown))
+            GuidePageContent(page: page) { markdown, kind in
+                editor.importTrees(MarkdownCodec.parse(markdown).map { tree in
+                    var tree = tree
+                    tree.kind = kind
+                    return tree
+                })
             } openPage: { id in
                 editor.openGuide(id)
             }
@@ -24,7 +28,7 @@ struct GuideView: View {
 
 struct GuidePageContent: View {
     let page: GuidePage
-    var useExample: ((String) -> Void)?
+    var useExample: ((String, TreeKind) -> Void)?
     var openPage: ((String) -> Void)?
 
     var body: some View {
@@ -90,8 +94,8 @@ struct GuidePageContent: View {
                     }
                 }
             }
-        case let .example(title, markdown):
-            ExampleTree(title: title, markdown: markdown, use: useExample)
+        case let .example(title, kind, markdown):
+            ExampleTree(title: title, kind: kind, markdown: markdown, use: useExample)
         }
     }
 
@@ -127,15 +131,20 @@ struct GuidePageContent: View {
 
 private struct ExampleTree: View {
     let title: String
+    let kind: TreeKind
     let markdown: String
-    let use: ((String) -> Void)?
+    let use: ((String, TreeKind) -> Void)?
 
     var body: some View {
-        let tree = MarkdownCodec.parse(markdown).first ?? Tree()
+        var tree = MarkdownCodec.parse(markdown).first ?? Tree()
+        tree.kind = kind
         var config = LayoutConfig()
-        config.nodeWidth = 190
         config.columnGap = 32
         config.padding = 16
+        // ページ幅（本文 756pt）に収まるようにノード幅を決める
+        func depth(_ node: Node) -> Int { 1 + (node.children.map(depth).max() ?? 0) }
+        let columns = CGFloat(depth(tree.root))
+        config.nodeWidth = min(190, (756 - config.padding * 2 - config.columnGap * (columns - 1)) / columns)
         let layout = TreeLayout.compute(root: tree.root, config: config) {
             NodeMetrics.height(for: $0.text, width: config.nodeWidth)
         }
@@ -144,7 +153,7 @@ private struct ExampleTree: View {
                 Text(title).font(.system(size: 14, weight: .semibold))
                 Spacer()
                 if let use {
-                    Button("この例からツリーを作る") { use(markdown) }
+                    Button("この例からツリーを作る") { use(markdown, kind) }
                 }
             }
             StaticTreeView(tree: tree, layout: layout)
@@ -162,7 +171,7 @@ enum GuideSnapshot {
     static func write(to directory: URL) {
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         for page in Guide.pages {
-            let view = GuidePageContent(page: page, useExample: { _ in }, openPage: { _ in })
+            let view = GuidePageContent(page: page, useExample: { _, _ in }, openPage: { _ in })
                 .padding(32)
                 .frame(width: 820, alignment: .leading)
                 .fixedSize(horizontal: false, vertical: true)

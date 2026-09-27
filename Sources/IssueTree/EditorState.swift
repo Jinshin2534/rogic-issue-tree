@@ -178,14 +178,14 @@ final class EditorState: ObservableObject {
         focusToken += 1
     }
 
-    /// 選択ノードを深掘り（なければ新しいツリーを作る）
-    func drillDown() {
+    /// 選択ノードを深掘り（なければ新しいツリーを作る）。種類を省略すると元と同じ種類。
+    func drillDown(kind: TreeKind? = nil) {
         commitEdit()
         guard guidePageID == nil, let selected = selectedID else { return }
         let treeID = currentTreeID
         let isNew = currentTree.root.find(selected)?.drillTreeID.flatMap { file.doc.tree($0) } == nil
         var drillID: UUID?
-        mutate { drillID = $0.drillDown(node: selected, in: treeID) }
+        mutate { drillID = $0.drillDown(node: selected, in: treeID, kind: kind) }
         guard let drillID else { return }
         openTree(drillID)
         if isNew, let root = file.doc.tree(drillID)?.root, root.children.isEmpty {
@@ -205,10 +205,15 @@ final class EditorState: ObservableObject {
         openTree(link.treeID, select: link.nodeID)
     }
 
-    func newTree() {
+    func setKind(_ kind: TreeKind) {
+        let treeID = currentTreeID
+        mutate { $0.updateTree(treeID) { $0.kind = kind } }
+    }
+
+    func newTree(kind: TreeKind = .issue) {
         commitEdit()
         var id: UUID?
-        mutate { id = $0.addTree() }
+        mutate { id = $0.addTree(kind: kind) }
         if let id {
             openTree(id)
             beginEdit()
