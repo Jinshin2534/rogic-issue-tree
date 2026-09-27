@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>イシューツリー for Mac</title>
+<meta name="description" content="キーボードだけでイシューツリー・ロジックツリーを素早く作れる macOS アプリ。サブイシューを深掘りして新しいツリーにつなげられます。">
+<link rel="icon" href="assets/icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f7f8fb;
+    --surface: #ffffff;
+    --text: #1b1f2a;
+    --muted: #5d6475;
+    --line: #e2e5ee;
+    --accent: #2f5bd3;
+    --accent-ink: #ffffff;
+    --red: #e5533f;
+    --kbd: #eef0f5;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12141a;
+      --surface: #1b1e27;
+      --text: #e9ebf1;
+      --muted: #a0a6b5;
+      --line: #2c303c;
+      --accent: #5b83f0;
+      --accent-ink: #ffffff;
+      --red: #ff7a66;
+      --kbd: #262a35;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #12141a;
+    --surface: #1b1e27;
+    --text: #e9ebf1;
+    --muted: #a0a6b5;
+    --line: #2c303c;
+    --accent: #5b83f0;
+    --accent-ink: #ffffff;
+    --red: #ff7a66;
+    --kbd: #262a35;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Noto Sans JP", -apple-system, BlinkMacSystemFont, "Hiragino Sans", sans-serif;
+    line-height: 1.75;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 0 16px; }
+  a { color: var(--accent); }
+
+  header.hero { text-align: center; padding: 72px 0 40px; }
+  .hero img.icon { width: 112px; height: 112px; }
+  .hero h1 { font-size: clamp(30px, 6vw, 44px); margin: 12px 0 8px; letter-spacing: 0.02em; }
+  .hero p.lead { color: var(--muted); font-size: 17px; margin: 0 auto 28px; max-width: 560px; }
+  .download {
+    display: inline-flex; align-items: center; gap: 10px;
+    background: var(--accent); color: var(--accent-ink);
+    padding: 14px 28px; border-radius: 12px;
+    font-weight: 700; font-size: 17px; text-decoration: none;
+    box-shadow: 0 6px 20px rgba(47, 91, 211, 0.28);
+  }
+  .download:hover { filter: brightness(1.06); }
+  .req { color: var(--muted); font-size: 13px; margin-top: 12px; }
+
+  .shot {
+    margin: 24px auto 0; border-radius: 14px; overflow: hidden;
+    border: 1px solid var(--line); background: var(--surface);
+    box-shadow: 0 24px 60px rgba(20, 30, 60, 0.14);
+  }
+  .shot img { display: block; width: 100%; height: auto; }
+
+  section { padding: 56px 0 8px; }
+  h2 { font-size: 24px; margin: 0 0 20px; }
+  .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 16px; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 20px; }
+  .card h3 { font-size: 16px; margin: 0 0 6px; }
+  .card p { margin: 0; color: var(--muted); font-size: 14px; }
+  .card .mark { color: var(--red); font-weight: 700; }
+
+  .keys { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 8px 24px; }
+  .keys div { display: flex; align-items: baseline; gap: 10px; font-size: 14px; padding: 6px 0; border-bottom: 1px solid var(--line); }
+  kbd {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12px;
+    background: var(--kbd); border: 1px solid var(--line); border-radius: 5px;
+    padding: 1px 7px; min-width: 64px; text-align: center; display: inline-block;
+  }
+
+  ol.steps { padding-left: 1.3em; margin: 0; }
+  ol.steps li { margin-bottom: 8px; }
+  code.cmd {
+    display: block; overflow-x: auto; white-space: nowrap;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 8px;
+    padding: 10px 14px; margin-top: 6px; font-size: 13px;
+  }
+  .note { color: var(--muted); font-size: 14px; }
+
+  footer { padding: 56px 0 40px; color: var(--muted); font-size: 13px; text-align: center; }
+</style>
+</head>
+<body>
+  <header class="hero wrap">
+    <img class="icon" src="assets/icon.png" alt="">
+    <h1>イシューツリー</h1>
+    <p class="lead">キーボードだけで、イシューツリー・ロジックツリーを素早く作れる Mac アプリ。気になるサブイシューは「深掘り」して、新しいツリーとして分け直せます。</p>
+    <a class="download" href="https://github.com/Jinshin2534/rogic-issue-tree/releases/latest/download/IssueTree-macOS.zip">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m6 11 6 6 6-6"/><path d="M4 21h16"/></svg>
+      Mac 版をダウンロード
+    </a>
+    <div class="req">無料 · macOS 14 以降 · Apple Silicon / Intel</div>
+    <div class="shot"><img src="assets/screenshot.png" alt="イシューツリーの画面。左にツリー一覧と考え方ガイド、右に横に広がるツリー。" width="1600" height="927"></div>
+  </header>
+
+  <main class="wrap">
+    <section>
+      <h2>できること</h2>
+      <div class="features">
+        <div class="card"><h3>キーボードだけで作れる</h3><p>Enter で兄弟、Tab で子を追加。打ち始めればそのまま入力できます。日本語入力にも対応。</p></div>
+        <div class="card"><h3>サブイシューを深掘り</h3><p>ノードを選んで ⌘↓ を押すと、それをトップにした新しいツリーが開きます。元のツリーとはリンクでつながります。</p></div>
+        <div class="card"><h3>考え方ガイド付き</h3><p>MECE、切り口のパターン、よいイシューの立て方などを、アプリの中でいつでも読めます。例からツリーを作ることもできます。</p></div>
+        <div class="card"><h3>書き出しも簡単</h3><p>PNG 画像や Markdown で書き出せます。インデント付きのテキストを貼り付けて、ツリーにすることもできます。</p></div>
+        <div class="card"><h3><span class="mark">赤字</span>で重要な論点を示す</h3><p>⌘R で赤字にして、どこに時間を使うかひと目でわかるようにします。</p></div>
+        <div class="card"><h3>自動保存</h3><p>1つのファイルに、元のツリーと深掘りしたツリーをまとめて保存します。</p></div>
+      </div>
+    </section>
+
+    <section>
+      <h2>主なショートカット</h2>
+      <div class="keys">
+        <div><kbd>Enter</kbd>兄弟を追加</div>
+        <div><kbd>Tab</kbd>子を追加</div>
+        <div><kbd>⇧Tab</kbd>階層を上げる</div>
+        <div><kbd>⌥↑ ⌥↓</kbd>順番を入れ替え</div>
+        <div><kbd>↑↓←→</kbd>選択を移動</div>
+        <div><kbd>Space</kbd>編集する</div>
+        <div><kbd>⌘R</kbd>赤字</div>
+        <div><kbd>⌘↓</kbd>深掘り</div>
+        <div><kbd>⌘↑</kbd>元のツリーへ戻る</div>
+        <div><kbd>⌘?</kbd>考え方ガイド</div>
+      </div>
+    </section>
+
+    <section>
+      <h2>インストール</h2>
+      <ol class="steps">
+        <li>上のボタンから zip をダウンロードして開きます。</li>
+        <li>出てきた「イシューツリー.app」を「アプリケーション」フォルダへ移します。</li>
+        <li>初回は「開けません」と表示されることがあります。App Store 外の個人配布アプリで、Apple の公証を受けていないためです。「システム設定 › プライバシーとセキュリティ」を開き、下のほうにある「このまま開く」を押してください。</li>
+      </ol>
+      <p class="note">うまく開けない場合は、ターミナルで次を実行してから開き直してください。</p>
+      <code class="cmd">xattr -dr com.apple.quarantine "/Applications/イシューツリー.app"</code>
+    </section>
+  </main>
+
+  <footer class="wrap">
+    <a href="https://github.com/Jinshin2534/rogic-issue-tree">GitHub</a> でソースコードを公開しています。
+  </footer>
+</body>
+</html>
